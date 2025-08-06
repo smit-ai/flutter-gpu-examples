@@ -49,3 +49,15 @@ app.*.map.json
 
 # FVM Version Cache
 .fvm/
+
+.metadata
+README.md
+android/
+ios/
+linux/
+macos/
+pubspec.lock
+test/
+web/
+windows/
+analysis_options.yaml
