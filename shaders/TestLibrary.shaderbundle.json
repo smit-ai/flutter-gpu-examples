@@ -19,22 +19,22 @@
     },
 	"PhysicsSandboxVertex": {
 		"type": "vertex",
-		"file": "shaders/physics_sandbox.vert",
+		"file": "shaders/physics_sandbox.vert"
 	},
 	"TetrisVertex": {
 		"type": "vertex",
-		"file": "shaders/tetris.vert",
+		"file": "shaders/tetris.vert"
 	},
 	"TetrisFragment": {
 		"type": "fragment",
-		"file": "shaders/tetris.frag",
+		"file": "shaders/tetris.frag"
 	},
 	"SDFRayMarchVertex": {
 		"type": "vertex",
-		"file": "shaders/sdf_enhanced_2.vert",
+		"file": "shaders/sdf_enhanced_2.vert"
 	},
 	"SDFRayMarchFragment": {
 		"type": "fragment",
-		"file": "shaders/sdf_enhanced_2.frag",
+		"file": "shaders/sdf_enhanced_2.frag"
 	}
 }
