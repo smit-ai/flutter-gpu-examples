@@ -1,9 +1,7 @@
-import 'dart:async' show Timer;
 import 'dart:collection';
 import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -694,8 +692,7 @@ class TrianglePainter extends CustomPainter {
       float32(<double>[-0.5, -0.5, 0, 0.5, 0.5, -0.5]),
     );
     pass.bindVertexBuffer(vertices, 3);
-    final mvp =
-        vec.Matrix4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0.5, 1) *
+    final mvp = vec.Matrix4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0.5, 1) *
         vec.Matrix4.rotationX(time) *
         vec.Matrix4.rotationY(time * seedX) *
         vec.Matrix4.rotationZ(time * seedY);
@@ -1284,8 +1281,7 @@ class GameScenePainter extends CustomPainter {
     pass.setDepthCompareOperation(gpu.CompareFunction.less);
     pass.bindPipeline(pipeline);
     final cameraFocusPoint = playerPosition;
-    final cameraPosition =
-        vec.Vector3(
+    final cameraPosition = vec.Vector3(
           cameraDistance * sin(cameraOrbit.x) * sin(cameraOrbit.y),
           cameraDistance * cos(cameraOrbit.y),
           cameraDistance * cos(cameraOrbit.x) * sin(cameraOrbit.y),
@@ -1778,10 +1774,10 @@ class _PhysicsDemoPageState extends State<PhysicsDemoPage> {
   }
 
   vec.Vector3 _getCameraPosition() => vec.Vector3(
-    _cameraDistance * sin(_cameraOrbit.x) * cos(_cameraOrbit.y),
-    _cameraDistance * sin(_cameraOrbit.y),
-    _cameraDistance * cos(_cameraOrbit.x) * cos(_cameraOrbit.y),
-  );
+        _cameraDistance * sin(_cameraOrbit.x) * cos(_cameraOrbit.y),
+        _cameraDistance * sin(_cameraOrbit.y),
+        _cameraDistance * cos(_cameraOrbit.x) * cos(_cameraOrbit.y),
+      );
   @override
   void dispose() {
     _ticker?.dispose();
@@ -1797,7 +1793,7 @@ class _PhysicsDemoPageState extends State<PhysicsDemoPage> {
     FocusScope.of(context).requestFocus(_focusNode);
     if (_pipeline == null) {
       return const Center(child: CircularProgressIndicator());
-	  }
+    }
     return KeyboardListener(
       focusNode: _focusNode,
       autofocus: true,
@@ -1817,8 +1813,7 @@ class _PhysicsDemoPageState extends State<PhysicsDemoPage> {
           } else if (details.buttons == 2) {
             setState(() {
               if (_cubes.isEmpty) return;
-              final newMode =
-                  _cubes
+              final newMode = _cubes
                           .firstWhere(
                             (c) => c.physicsMode <= 1.0,
                             orElse: () => _cubes.first,
@@ -2277,9 +2272,8 @@ class _TetrisPhysicsPageState extends State<TetrisPhysicsPage> {
   void _gameLoop(Duration elapsed) {
     if (!mounted) return;
     final currentTime = elapsed.inMilliseconds / 1000.0;
-    final deltaTime = (_lastFrameTime == 0)
-        ? 0.016
-        : (currentTime - _lastFrameTime);
+    final deltaTime =
+        (_lastFrameTime == 0) ? 0.016 : (currentTime - _lastFrameTime);
     _lastFrameTime = currentTime;
     _updateParticlePhysics(deltaTime);
     _dropTimer += deltaTime;
@@ -2385,7 +2379,7 @@ class _TetrisPhysicsPageState extends State<TetrisPhysicsPage> {
     FocusScope.of(context).requestFocus(_focusNode);
     if (_pipeline == null) {
       return const Center(child: CircularProgressIndicator());
-	  }
+    }
     return KeyboardListener(
       focusNode: _focusNode,
       autofocus: true,
@@ -2786,8 +2780,7 @@ class _RigidSoftBodyPhysicsPageState extends State<RigidSoftBodyPhysicsPage> {
           final diff = constraint.bodyA.position - constraint.bodyB.position;
           final distance = diff.length;
           if (distance > 0) {
-            final force =
-                (distance - constraint.restLength) *
+            final force = (distance - constraint.restLength) *
                 constraint.stiffness *
                 deltaTime;
             final direction = diff.normalized();
@@ -3096,357 +3089,749 @@ class RigidSoftBodyPainter extends CustomPainter {
   bool shouldRepaint(covariant RigidSoftBodyPainter oldDelegate) => true;
 }
 
+// Add this new class after the existing imports and helper functions
 class SDFMetaball {
   vec.Vector3 position;
   vec.Vector3 velocity;
   double radius;
   double mass;
-  vec.Vector4 color;
-  bool isRigid;
+  vec.Vector3 color;
   double temperature;
+  bool isDragging = false;
+
   SDFMetaball({
     required this.position,
-    required this.velocity,
     required this.radius,
     required this.mass,
     required this.color,
-    this.isRigid = true,
     this.temperature = 0.0,
-  });
+  }) : velocity = vec.Vector3.zero();
 }
 
+// Add this custom color picker widget
+class CustomColorPicker extends StatefulWidget {
+  final vec.Vector3 initialColor;
+  final Function(vec.Vector3) onColorChanged;
+  final VoidCallback onClose;
+
+  const CustomColorPicker({
+    super.key,
+    required this.initialColor,
+    required this.onColorChanged,
+    required this.onClose,
+  });
+
+  @override
+  State<CustomColorPicker> createState() => _CustomColorPickerState();
+}
+
+class _CustomColorPickerState extends State<CustomColorPicker> {
+  late vec.Vector3 currentColor;
+
+  @override
+  void initState() {
+    super.initState();
+    currentColor = vec.Vector3.copy(widget.initialColor);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 300,
+      height: 400,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(76),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: Colors.blue,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Color Picker',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  onPressed: widget.onClose,
+                  icon: const Icon(Icons.close, color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+
+          // Color preview
+          Container(
+            margin: const EdgeInsets.all(16),
+            height: 60,
+            decoration: BoxDecoration(
+              color: Color.fromRGBO(
+                (currentColor.r * 255).toInt(),
+                (currentColor.g * 255).toInt(),
+                (currentColor.b * 255).toInt(),
+                1.0,
+              ),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey),
+            ),
+          ),
+
+          // RGB Sliders
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildColorSlider('Red', currentColor.r, Colors.red,
+                        (value) {
+                      setState(() => currentColor.r = value);
+                      widget.onColorChanged(currentColor);
+                    }),
+                    const SizedBox(height: 16),
+                    _buildColorSlider('Green', currentColor.g, Colors.green,
+                        (value) {
+                      setState(() => currentColor.g = value);
+                      widget.onColorChanged(currentColor);
+                    }),
+                    const SizedBox(height: 16),
+                    _buildColorSlider('Blue', currentColor.b, Colors.blue,
+                        (value) {
+                      setState(() => currentColor.b = value);
+                      widget.onColorChanged(currentColor);
+                    }),
+                    const SizedBox(height: 24),
+
+                    // Preset colors
+                    const Text('Preset Colors',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildPresetColor(vec.Vector3(1.0, 0.2, 0.2)), // Red
+                        _buildPresetColor(vec.Vector3(0.2, 1.0, 0.2)), // Green
+                        _buildPresetColor(vec.Vector3(0.2, 0.2, 1.0)), // Blue
+                        _buildPresetColor(vec.Vector3(1.0, 1.0, 0.2)), // Yellow
+                        _buildPresetColor(
+                            vec.Vector3(1.0, 0.2, 1.0)), // Magenta
+                        _buildPresetColor(vec.Vector3(0.2, 1.0, 1.0)), // Cyan
+                        _buildPresetColor(vec.Vector3(1.0, 0.5, 0.0)), // Orange
+                        _buildPresetColor(vec.Vector3(0.5, 0.0, 1.0)), // Purple
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildColorSlider(
+      String label, double value, Color color, Function(double) onChanged) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+        const SizedBox(height: 4),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: color,
+            thumbColor: color,
+            overlayColor: color.withAlpha(51),
+          ),
+          child: Slider(
+            value: value,
+            min: 0.0,
+            max: 1.0,
+            onChanged: onChanged,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPresetColor(vec.Vector3 color) {
+    return GestureDetector(
+      onTap: () {
+        setState(() => currentColor = vec.Vector3.copy(color));
+        widget.onColorChanged(currentColor);
+      },
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: Color.fromRGBO(
+            (color.r * 255).toInt(),
+            (color.g * 255).toInt(),
+            (color.b * 255).toInt(),
+            1.0,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey),
+        ),
+      ),
+    );
+  }
+}
+
+// Add this new SDF Physics page class
 class SDFPhysicsPage extends StatefulWidget {
   const SDFPhysicsPage({super.key});
+
   @override
   State<SDFPhysicsPage> createState() => _SDFPhysicsPageState();
 }
 
 class _SDFPhysicsPageState extends State<SDFPhysicsPage> {
-  final vec.Vector3 _cameraOrbit = vec.Vector3(0.0, 0.5, 0.0);
-  final double _cameraDistance = 15.0;
-  final FocusNode _focusNode = FocusNode();
   final List<SDFMetaball> _metaballs = [];
-  bool _isRigidMode = true;
+  vec.Vector3 _cameraPosition = vec.Vector3(0, 5, 15);
+  vec.Vector3 _cameraTarget = vec.Vector3.zero();
+  final FocusNode _focusNode = FocusNode();
+  final Set<LogicalKeyboardKey> _pressedKeys = {};
+
+  bool _isRigidMode = false;
   double _smoothUnionK = 0.5;
-  double _gravityStrength = 9.8;
-  final double _dampingFactor = 0.98;
-  final double _bounceRestitution = 0.7;
-  final double _fluidViscosity = 0.1;
+  double _time = 0.0;
   Ticker? _ticker;
-  double _time = 0;
-  double _lastFrameTime = 0;
-  gpu.RenderPipeline? _pipeline;
-  final Random _random = Random();
+
+  // Interaction state
+  SDFMetaball? _draggedMetaball;
+  Offset? _lastPanPosition;
+  bool _isShiftPressed = false;
+  final bool _isRightMousePressed = false;
+
+  // Color picker state
+  // SDFMetaball? _colorPickerMetaball;
+  OverlayEntry? _colorPickerOverlay;
+
   @override
   void initState() {
     super.initState();
     _initializeMetaballs();
-    _pipeline = gpu.gpuContext.createRenderPipeline(
-      shaderLibrary['SDFRayMarchVertex']!,
-      shaderLibrary['SDFRayMarchFragment']!,
-    );
-    _ticker = Ticker(_physicsLoop)..start();
+    _ticker = Ticker(_updatePhysics);
+    _ticker!.start();
   }
 
   void _initializeMetaballs() {
-    _metaballs.clear();
+    final random = Random();
     for (int i = 0; i < 8; i++) {
-      final position = vec.Vector3(
-        (_random.nextDouble() - 0.5) * 10,
-        _random.nextDouble() * 8 + 2,
-        (_random.nextDouble() - 0.5) * 10,
-      );
-      final velocity = vec.Vector3(
-        (_random.nextDouble() - 0.5) * 2,
-        0,
-        (_random.nextDouble() - 0.5) * 2,
-      );
-      final color = vec.Vector4(
-        _random.nextDouble() * 0.8 + 0.2,
-        _random.nextDouble() * 0.8 + 0.2,
-        _random.nextDouble() * 0.8 + 0.2,
-        1.0,
-      );
-      _metaballs.add(
-        SDFMetaball(
-          position: position,
-          velocity: velocity,
-          radius: _random.nextDouble() * 0.8 + 0.5,
-          mass: _random.nextDouble() * 2 + 1,
-          color: color,
-          isRigid: _isRigidMode,
+      _metaballs.add(SDFMetaball(
+        position: vec.Vector3(
+          (random.nextDouble() - 0.5) * 10,
+          random.nextDouble() * 5 + 2,
+          (random.nextDouble() - 0.5) * 10,
         ),
-      );
+        radius: 0.8 + random.nextDouble() * 0.7,
+        mass: 1.0 + random.nextDouble() * 2.0,
+        color: vec.Vector3(
+          0.3 + random.nextDouble() * 0.7,
+          0.3 + random.nextDouble() * 0.7,
+          0.3 + random.nextDouble() * 0.7,
+        ),
+        temperature: random.nextDouble(),
+      ));
     }
   }
 
-  void _physicsLoop(Duration elapsed) {
+  void _updatePhysics(Duration elapsed) {
     if (!mounted) return;
+
     final currentTime = elapsed.inMilliseconds / 1000.0;
-    final deltaTime = (_lastFrameTime == 0)
-        ? 0.016
-        : (currentTime - _lastFrameTime).clamp(0.0, 0.033);
-    _lastFrameTime = currentTime;
-    _updatePhysics(deltaTime);
-    setState(() {
-      _time = currentTime;
-    });
-  }
+    final deltaTime = currentTime - _time;
+    _time = currentTime;
 
-  void _updatePhysics(double deltaTime) {
-    const double boundarySize = 8.0;
-    const double floorY = -2.0;
-    for (int i = 0; i < _metaballs.length; i++) {
-      final ball = _metaballs[i];
-      ball.velocity.y -= _gravityStrength * deltaTime;
-      if (!ball.isRigid) {
-        _applyFluidForces(ball, deltaTime);
-      }
-      for (int j = i + 1; j < _metaballs.length; j++) {
-        final other = _metaballs[j];
-        _applyInterBallForces(ball, other, deltaTime);
-      }
-      ball.position += ball.velocity * deltaTime;
-      _handleBoundaryCollisions(ball, boundarySize, floorY);
-      ball.velocity *= _dampingFactor;
-      if (!ball.isRigid) {
-        ball.temperature = (ball.velocity.length / 10.0).clamp(0.0, 1.0);
-      }
+    // Handle WASD movement
+    _handleKeyboardInput(deltaTime);
+
+    // Physics simulation
+    if (!_isRigidMode) {
+      _updateSoftBodyPhysics(deltaTime);
+    } else {
+      _updateRigidBodyPhysics(deltaTime);
     }
+
+    setState(() {});
   }
 
-  void _applyFluidForces(SDFMetaball ball, double deltaTime) {
-    vec.Vector3 fluidForce = vec.Vector3.zero();
-    for (final other in _metaballs) {
-      if (other == ball) continue;
-      final distance = (ball.position - other.position).length;
-      final influence = (ball.radius + other.radius) * 2.0;
-      if (distance < influence && distance > 0.001) {
-        final direction = (ball.position - other.position).normalized();
-        final strength = (1.0 - distance / influence) * _fluidViscosity;
-        fluidForce += direction * strength * 50.0;
-        final velocityDiff = other.velocity - ball.velocity;
-        fluidForce += velocityDiff * strength * 10.0;
-      }
+  void _handleKeyboardInput(double deltaTime) {
+    const double moveSpeed = 10.0;
+    vec.Vector3 movement = vec.Vector3.zero();
+
+    if (_pressedKeys.contains(LogicalKeyboardKey.keyW)) {
+      movement += (_cameraTarget - _cameraPosition).normalized();
     }
-    ball.velocity += fluidForce * deltaTime;
-  }
+    if (_pressedKeys.contains(LogicalKeyboardKey.keyS)) {
+      movement -= (_cameraTarget - _cameraPosition).normalized();
+    }
+    if (_pressedKeys.contains(LogicalKeyboardKey.keyA)) {
+      final right = (_cameraTarget - _cameraPosition)
+          .cross(vec.Vector3(0, 1, 0))
+          .normalized();
+      movement -= right;
+    }
+    if (_pressedKeys.contains(LogicalKeyboardKey.keyD)) {
+      final right = (_cameraTarget - _cameraPosition)
+          .cross(vec.Vector3(0, 1, 0))
+          .normalized();
+      movement += right;
+    }
 
-  void _applyInterBallForces(
-    SDFMetaball ball1,
-    SDFMetaball ball2,
-    double deltaTime,
-  ) {
-    final distance = (ball1.position - ball2.position).length;
-    final minDistance = ball1.radius + ball2.radius;
-    if (distance < minDistance && distance > 0.001) {
-      final direction = (ball1.position - ball2.position).normalized();
-      final overlap = minDistance - distance;
-      if (ball1.isRigid && ball2.isRigid) {
-        final totalMass = ball1.mass + ball2.mass;
-        final force = direction * overlap * 100.0;
-        ball1.velocity += force * (ball2.mass / totalMass) * deltaTime;
-        ball2.velocity -= force * (ball1.mass / totalMass) * deltaTime;
-        final separation = direction * (overlap * 0.5);
-        ball1.position += separation;
-        ball2.position -= separation;
-      } else {
-        final force = direction * overlap * 20.0;
-        ball1.velocity += force * deltaTime / ball1.mass;
-        ball2.velocity -= force * deltaTime / ball2.mass;
-      }
+    if (movement.length > 0) {
+      movement.normalize();
+      _cameraPosition += movement * moveSpeed * deltaTime;
+      _cameraTarget += movement * moveSpeed * deltaTime;
     }
   }
 
-  void _handleBoundaryCollisions(
-    SDFMetaball ball,
-    double boundarySize,
-    double floorY,
-  ) {
-    if (ball.position.y - ball.radius < floorY) {
-      ball.position.y = floorY + ball.radius;
-      ball.velocity.y = ball.velocity.y.abs() * _bounceRestitution;
-    }
-    if (ball.position.x.abs() + ball.radius > boundarySize) {
-      ball.position.x = ball.position.x.sign * (boundarySize - ball.radius);
-      ball.velocity.x *= -_bounceRestitution;
-    }
-    if (ball.position.z.abs() + ball.radius > boundarySize) {
-      ball.position.z = ball.position.z.sign * (boundarySize - ball.radius);
-      ball.velocity.z *= -_bounceRestitution;
-    }
-  }
+  void _updateSoftBodyPhysics(double deltaTime) {
+    const double gravity = -9.81;
+    const double damping = 0.98;
+    const double floorY = 0.0;
 
-  void _togglePhysicsMode() {
-    setState(() {
-      _isRigidMode = !_isRigidMode;
-      for (final ball in _metaballs) {
-        ball.isRigid = _isRigidMode;
-        if (!_isRigidMode) {
-          ball.velocity += vec.Vector3(
-            (_random.nextDouble() - 0.5) * 2,
-            _random.nextDouble() * 2,
-            (_random.nextDouble() - 0.5) * 2,
-          );
+    for (var metaball in _metaballs) {
+      if (metaball.isDragging) continue;
+
+      // Apply gravity
+      metaball.velocity.y += gravity * deltaTime;
+
+      // Apply damping
+      metaball.velocity *= damping;
+
+      // Update position
+      metaball.position += metaball.velocity * deltaTime;
+
+      // Floor collision
+      if (metaball.position.y - metaball.radius < floorY) {
+        metaball.position.y = floorY + metaball.radius;
+        metaball.velocity.y *= -0.6; // Bounce with energy loss
+        metaball.temperature = min(1.0, metaball.temperature + 0.1);
+      }
+
+      // Metaball interactions (soft body)
+      for (var other in _metaballs) {
+        if (other == metaball) continue;
+
+        final distance = (metaball.position - other.position).length;
+        final minDistance = metaball.radius + other.radius;
+
+        if (distance < minDistance * 1.5) {
+          final overlap = minDistance - distance;
+          if (overlap > 0) {
+            final direction = (metaball.position - other.position).normalized();
+            final force = direction * overlap * 2.0;
+
+            metaball.velocity += force * deltaTime / metaball.mass;
+            other.velocity -= force * deltaTime / other.mass;
+
+            // Heat transfer
+            final avgTemp = (metaball.temperature + other.temperature) * 0.5;
+            metaball.temperature = avgTemp;
+            other.temperature = avgTemp;
+          }
         }
       }
-    });
+
+      // Cool down over time
+      metaball.temperature = max(0.0, metaball.temperature - deltaTime * 0.2);
+    }
   }
 
-  void _addMetaball(Offset localPosition, Size size) {
-    final normalizedX = (localPosition.dx / size.width) * 2 - 1;
-    final normalizedY = 1 - (localPosition.dy / size.height) * 2;
-    final position = vec.Vector3(normalizedX * 8, normalizedY * 6 + 2, 0);
-    final color = vec.Vector4(
-      _random.nextDouble() * 0.8 + 0.2,
-      _random.nextDouble() * 0.8 + 0.2,
-      _random.nextDouble() * 0.8 + 0.2,
-      1.0,
-    );
-    setState(() {
-      _metaballs.add(
-        SDFMetaball(
-          position: position,
-          velocity: vec.Vector3(
-            (_random.nextDouble() - 0.5) * 4,
-            _random.nextDouble() * 2,
-            (_random.nextDouble() - 0.5) * 4,
-          ),
-          radius: _random.nextDouble() * 0.6 + 0.4,
-          mass: _random.nextDouble() * 1.5 + 0.5,
-          color: color,
-          isRigid: _isRigidMode,
+  void _updateRigidBodyPhysics(double deltaTime) {
+    const double gravity = -9.81;
+    const double damping = 0.99;
+    const double floorY = 0.0;
+
+    for (var metaball in _metaballs) {
+      if (metaball.isDragging) continue;
+
+      // Apply gravity
+      metaball.velocity.y += gravity * deltaTime;
+
+      // Apply damping
+      metaball.velocity *= damping;
+
+      // Update position
+      metaball.position += metaball.velocity * deltaTime;
+
+      // Floor collision
+      if (metaball.position.y - metaball.radius < floorY) {
+        metaball.position.y = floorY + metaball.radius;
+        metaball.velocity.y *= -0.8; // More bouncy for rigid bodies
+      }
+
+      // Rigid body collisions
+      for (var other in _metaballs) {
+        if (other == metaball) continue;
+
+        final distance = (metaball.position - other.position).length;
+        final minDistance = metaball.radius + other.radius;
+
+        if (distance < minDistance) {
+          final direction = (metaball.position - other.position).normalized();
+          final overlap = minDistance - distance;
+
+          // Separate the metaballs
+          final separation = direction * (overlap * 0.5);
+          metaball.position += separation;
+          other.position -= separation;
+
+          // Elastic collision
+          final relativeVelocity = metaball.velocity - other.velocity;
+          final velocityAlongNormal = relativeVelocity.dot(direction);
+
+          if (velocityAlongNormal > 0) continue;
+
+          final restitution = 0.8;
+          final impulse = -(1 + restitution) *
+              velocityAlongNormal /
+              (1 / metaball.mass + 1 / other.mass);
+
+          metaball.velocity += direction * (impulse / metaball.mass);
+          other.velocity -= direction * (impulse / other.mass);
+        }
+      }
+    }
+  }
+
+  void _handlePanStart(DragStartDetails details) {
+    final renderBox = context.findRenderObject() as RenderBox;
+    final localPosition = renderBox.globalToLocal(details.globalPosition);
+
+    // Check if we're clicking on a metaball
+    _draggedMetaball =
+        _getMetaballAtScreenPosition(localPosition, renderBox.size);
+    _lastPanPosition = localPosition;
+  }
+
+  void _handlePanUpdate(DragUpdateDetails details) {
+    final renderBox = context.findRenderObject() as RenderBox;
+    final localPosition = renderBox.globalToLocal(details.globalPosition);
+
+    if (_isShiftPressed || _isRightMousePressed) {
+      // World/camera movement
+      final delta = localPosition - (_lastPanPosition ?? localPosition);
+      final sensitivity = 0.01;
+
+      // Rotate camera around target
+      final distance = (_cameraPosition - _cameraTarget).length;
+      final currentAngle = atan2(_cameraPosition.x - _cameraTarget.x,
+          _cameraPosition.z - _cameraTarget.z);
+      final currentElevation =
+          asin((_cameraPosition.y - _cameraTarget.y) / distance);
+
+      final newAngle = currentAngle + delta.dx * sensitivity;
+      final newElevation = (currentElevation - delta.dy * sensitivity)
+          .clamp(-pi / 2 + 0.1, pi / 2 - 0.1);
+
+      _cameraPosition.x =
+          _cameraTarget.x + distance * sin(newAngle) * cos(newElevation);
+      _cameraPosition.z =
+          _cameraTarget.z + distance * cos(newAngle) * cos(newElevation);
+      _cameraPosition.y = _cameraTarget.y + distance * sin(newElevation);
+    } else if (_draggedMetaball != null) {
+      // Metaball dragging
+      final worldDelta = _screenToWorldDelta(
+          localPosition - (_lastPanPosition ?? localPosition), renderBox.size);
+      _draggedMetaball!.position += worldDelta;
+      _draggedMetaball!.velocity *= 0.5; // Dampen velocity while dragging
+      _draggedMetaball!.isDragging = true;
+    }
+
+    _lastPanPosition = localPosition;
+  }
+
+  void _handlePanEnd(DragEndDetails details) {
+    if (_draggedMetaball != null) {
+      _draggedMetaball!.isDragging = false;
+    }
+    _draggedMetaball = null;
+    _lastPanPosition = null;
+  }
+
+  void _handleTap(TapUpDetails details) {
+    final renderBox = context.findRenderObject() as RenderBox;
+    final localPosition = renderBox.globalToLocal(details.globalPosition);
+
+    final metaball =
+        _getMetaballAtScreenPosition(localPosition, renderBox.size);
+    if (metaball == null) {
+      // Add new metaball
+      final worldPos = _screenToWorldPosition(localPosition, renderBox.size);
+      final random = Random();
+      _metaballs.add(SDFMetaball(
+        position: worldPos,
+        radius: 0.8 + random.nextDouble() * 0.7,
+        mass: 1.0 + random.nextDouble() * 2.0,
+        color: vec.Vector3(
+          0.3 + random.nextDouble() * 0.7,
+          0.3 + random.nextDouble() * 0.7,
+          0.3 + random.nextDouble() * 0.7,
         ),
-      );
-    });
+        temperature: random.nextDouble(),
+      ));
+    }
+  }
+
+  void _handleDoubleTap(TapDownDetails details) {
+    final renderBox = context.findRenderObject() as RenderBox;
+    final localPosition = renderBox.globalToLocal(details.globalPosition);
+
+    final metaball =
+        _getMetaballAtScreenPosition(localPosition, renderBox.size);
+    if (metaball != null) {
+      _showColorPicker(metaball, details.globalPosition);
+    }
+  }
+
+  void _showColorPicker(SDFMetaball metaball, Offset globalPosition) {
+    // _colorPickerMetaball = metaball;
+
+    _colorPickerOverlay = OverlayEntry(
+      builder: (context) => Positioned(
+        left: globalPosition.dx - 150,
+        top: globalPosition.dy - 200,
+        child: Material(
+          color: Colors.transparent,
+          child: CustomColorPicker(
+            initialColor: metaball.color,
+            onColorChanged: (newColor) {
+              setState(() {
+                metaball.color = newColor;
+              });
+            },
+            onClose: () {
+              _colorPickerOverlay?.remove();
+              _colorPickerOverlay = null;
+              // _colorPickerMetaball = null;
+            },
+          ),
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(_colorPickerOverlay!);
+  }
+
+  SDFMetaball? _getMetaballAtScreenPosition(Offset screenPos, Size screenSize) {
+    for (var metaball in _metaballs) {
+      final screenMetaballPos =
+          _worldToScreenPosition(metaball.position, screenSize);
+      final distance = (screenPos - screenMetaballPos).distance;
+      if (distance < 30) {
+        // 30 pixel tolerance
+        return metaball;
+      }
+    }
+    return null;
+  }
+
+  Offset _worldToScreenPosition(vec.Vector3 worldPos, Size screenSize) {
+    // Simple projection - this is a basic implementation
+    final viewMatrix = _getViewMatrix();
+    final projMatrix =
+        _getProjectionMatrix(screenSize.width / screenSize.height);
+    final mvp = projMatrix * viewMatrix;
+
+    final clipPos = mvp * vec.Vector4(worldPos.x, worldPos.y, worldPos.z, 1.0);
+    final ndc = clipPos.xyz / clipPos.w;
+
+    return Offset(
+      (ndc.x * 0.5 + 0.5) * screenSize.width,
+      (1.0 - (ndc.y * 0.5 + 0.5)) * screenSize.height,
+    );
+  }
+
+  vec.Vector3 _screenToWorldPosition(Offset screenPos, Size screenSize) {
+    // Convert screen position to world position on a plane
+    final viewMatrix = _getViewMatrix();
+    final projMatrix =
+        _getProjectionMatrix(screenSize.width / screenSize.height);
+    final mvp = projMatrix * viewMatrix;
+    final invMVP = vec.Matrix4.inverted(mvp);
+
+    final ndc = vec.Vector3(
+      (screenPos.dx / screenSize.width) * 2.0 - 1.0,
+      1.0 - (screenPos.dy / screenSize.height) * 2.0,
+      0.0, // Project onto z=0 plane
+    );
+
+    final worldPos = invMVP * vec.Vector4(ndc.x, ndc.y, ndc.z, 1.0);
+    return worldPos.xyz / worldPos.w;
+  }
+
+  vec.Vector3 _screenToWorldDelta(Offset screenDelta, Size screenSize) {
+    final sensitivity = 0.01;
+    return vec.Vector3(
+      screenDelta.dx * sensitivity,
+      -screenDelta.dy * sensitivity,
+      0.0,
+    );
+  }
+
+  vec.Matrix4 _getViewMatrix() {
+    return vec.makeViewMatrix(
+        _cameraPosition, _cameraTarget, vec.Vector3(0, 1, 0));
+  }
+
+  vec.Matrix4 _getProjectionMatrix(double aspectRatio) {
+    return vec.makePerspectiveMatrix(pi / 4, aspectRatio, 0.1, 100.0);
   }
 
   @override
   void dispose() {
     _ticker?.dispose();
     _focusNode.dispose();
-    _pipeline = null;
+    _colorPickerOverlay?.remove();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    FocusScope.of(context).requestFocus(_focusNode);
-    if (_pipeline == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    return Column(
-      children: [
-        Container(
-          height: 120,
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  ElevatedButton(
-                    onPressed: _togglePhysicsMode,
-                    child: Text(
-                      _isRigidMode
-                          ? 'Switch to Soft Body'
-                          : 'Switch to Rigid Body',
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  ElevatedButton(
-                    onPressed: _initializeMetaballs,
-                    child: const Text('Reset'),
-                  ),
-                ],
-              ),
-              Row(
-                children: [
-                  const Text('Smooth Union: '),
-                  Expanded(
-                    child: Slider(
-                      value: _smoothUnionK,
-                      min: 0.1,
-                      max: 2.0,
-                      onChanged: (value) =>
-                          setState(() => _smoothUnionK = value),
-                    ),
-                  ),
-                  const Text('Gravity: '),
-                  Expanded(
-                    child: Slider(
-                      value: _gravityStrength,
-                      min: 0.0,
-                      max: 20.0,
-                      onChanged: (value) =>
-                          setState(() => _gravityStrength = value),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: KeyboardListener(
-            focusNode: _focusNode,
-            autofocus: true,
-            onKeyEvent: (KeyEvent event) {
-              if (event is KeyDownEvent) {
-                if (event.logicalKey == LogicalKeyboardKey.space) {
-                  _togglePhysicsMode();
-                } else if (event.logicalKey == LogicalKeyboardKey.keyR) {
-                  _initializeMetaballs();
-                }
-              }
-            },
-            child: GestureDetector(
-              onTapDown: (details) =>
-                  _addMetaball(details.localPosition, context.size!),
-              onPanUpdate: (details) => setState(() {
-                _cameraOrbit.x += details.delta.dx * 0.01;
-                _cameraOrbit.y -= details.delta.dy * 0.01;
-                _cameraOrbit.y = _cameraOrbit.y.clamp(
-                  -pi / 2 + 0.1,
-                  pi / 2 - 0.1,
-                );
-              }),
+    return Scaffold(
+      body: Focus(
+        focusNode: _focusNode,
+        autofocus: true,
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent) {
+            _pressedKeys.add(event.logicalKey);
+            if (event.logicalKey == LogicalKeyboardKey.shiftLeft ||
+                event.logicalKey == LogicalKeyboardKey.shiftRight) {
+              _isShiftPressed = true;
+            }
+          } else if (event is KeyUpEvent) {
+            _pressedKeys.remove(event.logicalKey);
+            if (event.logicalKey == LogicalKeyboardKey.shiftLeft ||
+                event.logicalKey == LogicalKeyboardKey.shiftRight) {
+              _isShiftPressed = false;
+            }
+          }
+          return KeyEventResult.handled;
+        },
+        child: Stack(
+          children: [
+            GestureDetector(
+              onPanStart: _handlePanStart,
+              onPanUpdate: _handlePanUpdate,
+              onPanEnd: _handlePanEnd,
+              onTapUp: _handleTap,
+              onTapDown: _handleDoubleTap,
               child: CustomPaint(
                 size: Size.infinite,
                 painter: SDFRayMarchPainter(
-                  pipeline: _pipeline!,
                   metaballs: _metaballs,
-                  cameraOrbit: _cameraOrbit,
-                  cameraDistance: _cameraDistance,
+                  cameraPosition: _cameraPosition,
+                  cameraTarget: _cameraTarget,
                   time: _time,
-                  smoothUnionK: _smoothUnionK,
                   isRigidMode: _isRigidMode,
+                  smoothUnionK: _smoothUnionK,
                 ),
               ),
             ),
-          ),
+
+            // Controls UI
+            Positioned(
+              top: 50,
+              left: 20,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.black.withAlpha(178),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Controls:',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
+                    const Text('WASD: Move camera',
+                        style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    const Text('Click: Add metaball',
+                        style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    const Text('Drag: Move metaball',
+                        style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    const Text('Double-tap: Color picker',
+                        style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    const Text('Shift+Drag: Rotate view',
+                        style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        const Text('Physics: ',
+                            style: TextStyle(color: Colors.white)),
+                        Switch(
+                          value: _isRigidMode,
+                          onChanged: (value) =>
+                              setState(() => _isRigidMode = value),
+                          activeThumbColor: Colors.blue,
+                        ),
+                        Text(_isRigidMode ? 'Rigid' : 'Soft',
+                            style: const TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                    if (!_isRigidMode) ...[
+                      const Text('Smooth Union K:',
+                          style: TextStyle(color: Colors.white)),
+                      SizedBox(
+                        width: 200,
+                        child: Slider(
+                          value: _smoothUnionK,
+                          min: 0.1,
+                          max: 2.0,
+                          onChanged: (value) =>
+                              setState(() => _smoothUnionK = value),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
 
+// Add this custom painter for SDF ray marching
 class SDFRayMarchPainter extends CustomPainter {
-  SDFRayMarchPainter({
-    required this.pipeline,
-    required this.metaballs,
-    required this.cameraOrbit,
-    required this.cameraDistance,
-    required this.time,
-    required this.smoothUnionK,
-    required this.isRigidMode,
-  });
-  final gpu.RenderPipeline pipeline;
   final List<SDFMetaball> metaballs;
-  final vec.Vector3 cameraOrbit;
-  final double cameraDistance;
+  final vec.Vector3 cameraPosition;
+  final vec.Vector3 cameraTarget;
   final double time;
-  final double smoothUnionK;
   final bool isRigidMode;
+  final double smoothUnionK;
+
+  SDFRayMarchPainter({
+    required this.metaballs,
+    required this.cameraPosition,
+    required this.cameraTarget,
+    required this.time,
+    required this.isRigidMode,
+    required this.smoothUnionK,
+  });
+
   @override
   void paint(Canvas canvas, Size size) {
     final gpu.Texture renderTexture = gpu.gpuContext.createTexture(
@@ -3456,6 +3841,7 @@ class SDFRayMarchPainter extends CustomPainter {
       enableRenderTargetUsage: true,
       coordinateSystem: gpu.TextureCoordinateSystem.renderToTexture,
     );
+
     final commandBuffer = gpu.gpuContext.createCommandBuffer();
     final renderTarget = gpu.RenderTarget.singleColor(
       gpu.ColorAttachment(
@@ -3463,60 +3849,65 @@ class SDFRayMarchPainter extends CustomPainter {
         clearValue: vec.Vector4(0.02, 0.02, 0.05, 1.0),
       ),
     );
+
     final pass = commandBuffer.createRenderPass(renderTarget);
+
+    final vertex = shaderLibrary['SDFRayMarchVertex']!;
+    final fragment = shaderLibrary['SDFRayMarchFragment']!;
+    final pipeline = gpu.gpuContext.createRenderPipeline(vertex, fragment);
+
     pass.bindPipeline(pipeline);
+
+    // Create fullscreen quad
     final transients = gpu.gpuContext.createHostBuffer();
-    final vertices = transients.emplace(
-      float32(<double>[-1, -1, 0, 0, 1, -1, 1, 0, 1, 1, 1, 1, -1, 1, 0, 1]),
-    );
-    final indices = transients.emplace(uint16(<int>[0, 1, 2, 0, 2, 3]));
-    final cameraPosition = vec.Vector3(
-      cameraDistance * sin(cameraOrbit.x) * cos(cameraOrbit.y),
-      cameraDistance * sin(cameraOrbit.y),
-      cameraDistance * cos(cameraOrbit.x) * cos(cameraOrbit.y),
-    );
-    final metaballData = <double>[];
+    final vertices = transients.emplace(float32([
+      -1.0, -1.0, 0.0, 0.0, // Bottom-left
+      1.0, -1.0, 1.0, 0.0, // Bottom-right
+      1.0, 1.0, 1.0, 1.0, // Top-right
+      -1.0, -1.0, 0.0, 0.0, // Bottom-left
+      1.0, 1.0, 1.0, 1.0, // Top-right
+      -1.0, 1.0, 0.0, 1.0, // Top-left
+    ]));
+
+    pass.bindVertexBuffer(vertices, 6);
+
+    // Prepare scene uniform data
+    final sceneData = <double>[
+      // Camera position
+      cameraPosition.x, cameraPosition.y, cameraPosition.z, 0.0,
+      // Resolution
+      size.width, size.height, 0.0, 0.0,
+      // Animation data: time, smoothUnionK, isRigidMode, metaballCount
+      time, smoothUnionK, isRigidMode ? 1.0 : 0.0, metaballs.length.toDouble(),
+    ];
+
+    // Add metaball data (position+radius, color+temperature for each)
     for (int i = 0; i < 16; i++) {
       if (i < metaballs.length) {
-        final ball = metaballs[i];
-        metaballData.addAll([
-          ball.position.x,
-          ball.position.y,
-          ball.position.z,
-          ball.radius,
-          ball.color.x,
-          ball.color.y,
-          ball.color.z,
-          ball.temperature,
+        final metaball = metaballs[i];
+        sceneData.addAll([
+          metaball.position.x,
+          metaball.position.y,
+          metaball.position.z,
+          metaball.radius,
+          metaball.color.x,
+          metaball.color.y,
+          metaball.color.z,
+          metaball.temperature,
         ]);
       } else {
-        metaballData.addAll([0, 0, 0, 0, 0, 0, 0, 0]);
+        // Empty metaball data
+        sceneData.addAll([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
       }
     }
-    final sceneUniforms = Float32List.fromList([
-      cameraPosition.x,
-      cameraPosition.y,
-      cameraPosition.z,
-      0,
-      size.width,
-      size.height,
-      0,
-      0,
-      time,
-      smoothUnionK,
-      isRigidMode ? 1.0 : 0.0,
-      metaballs.length.toDouble(),
-      ...metaballData,
-    ]);
-    final sceneUniformsView = transients.emplace(
-      sceneUniforms.buffer.asByteData(),
-    );
-    pass.bindVertexBuffer(vertices, 4);
-    pass.bindIndexBuffer(indices, gpu.IndexType.int16, 6);
-    final sceneInfoSlot = pipeline.fragmentShader.getUniformSlot('SceneInfo');
-    pass.bindUniform(sceneInfoSlot, sceneUniformsView);
+
+    final sceneInfoSlot = vertex.getUniformSlot('SceneInfo');
+    final sceneInfoView = transients.emplace(float32(sceneData));
+    pass.bindUniform(sceneInfoSlot, sceneInfoView);
+
     pass.draw();
     commandBuffer.submit();
+
     final image = renderTexture.asImage();
     canvas.drawImage(image, Offset.zero, Paint());
   }
