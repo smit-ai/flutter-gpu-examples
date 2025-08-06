@@ -31,10 +31,10 @@
 	},
 	"SDFRayMarchVertex": {
 		"type": "vertex",
-		"file": "shaders/sdf_enhanced_2.vert"
+		"file": "shaders/sdf_raymarch.vert"
 	},
 	"SDFRayMarchFragment": {
 		"type": "fragment",
-		"file": "shaders/sdf_enhanced_2.frag"
+		"file": "shaders/sdf_raymarch.frag"
 	}
 }
